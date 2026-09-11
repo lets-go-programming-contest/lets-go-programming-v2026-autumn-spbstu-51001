@@ -29,24 +29,21 @@ func main() {
 	switch op {
 	case "+":
 		res = num1 + num2
-		return
 	case "-":
 		res = num1 - num2
-		return
 	case "*":
 		res = num1 * num2
-		return
 	case "/":
 		if num2 == 0 {
 			fmt.Println("Division by zero")
 			return
 		}
 		res = num1 / num2
-		return
 	default:
 		fmt.Println("Invalid operation")
 		return
 	}
+
 	fmt.Println(res)
 
 }
