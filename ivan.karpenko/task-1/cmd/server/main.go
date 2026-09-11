@@ -3,7 +3,6 @@ package main
 import "fmt"
 
 func main() {
-
 	var num1 int
 	_, err := fmt.Scan(&num1)
 	if err != nil {
@@ -45,5 +44,4 @@ func main() {
 	}
 
 	fmt.Println(res)
-
 }
