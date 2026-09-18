@@ -33,6 +33,10 @@ func main() {
 	case "*":
 		result = firstOperand * secondOperand
 	case "/":
+		if secondOperand == 0 {
+			fmt.Println("Division by zero")
+			return
+		}
 		result = firstOperand / secondOperand
 	default:
 		fmt.Println("Invalid operation")
