@@ -11,6 +11,7 @@ func main() {
 	}
 
 	_, err = fmt.Scan(&scndArg)
+
 	if err != nil {
 		fmt.Println("Invalid second operand")
 		return
