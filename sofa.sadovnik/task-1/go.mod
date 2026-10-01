@@ -1,3 +1,3 @@
-module github.com/sonnesso/sofa.sadovnik
+module github.com/sonnesso/task-1
 
 go 1.27.1
