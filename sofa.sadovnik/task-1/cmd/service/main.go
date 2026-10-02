@@ -27,7 +27,6 @@ func main() {
 	case "*":
 		fmt.Println(frstArg * scndArg)
 	case "/":
-		fmt.Println(frstArg / scndArg)
 		if scndArg == 0 {
 			fmt.Println("Division by zero")
 		} else {
