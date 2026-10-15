@@ -4,18 +4,30 @@ import "fmt"
 
 func main() {
 	var departmentsCount int
-	fmt.Scan(&departmentsCount)
 
-	for department := 0; department < departmentsCount; department++ {
+	if _, err := fmt.Scan(&departmentsCount); err != nil {
+		return
+	}
+
+	for range departmentsCount {
 		var employeesCount int
-		fmt.Scan(&employeesCount)
+
+		if _, err := fmt.Scan(&employeesCount); err != nil {
+			return
+		}
+
 		minTemperature := 15
 		maxTemperature := 30
 
-		for employee := 0; employee < employeesCount; employee++ {
-			var operation string
-			var temperature int
-			fmt.Scan(&operation, &temperature)
+		for range employeesCount {
+			var (
+				operation   string
+				temperature int
+			)
+
+			if _, err := fmt.Scan(&operation, &temperature); err != nil {
+				return
+			}
 
 			if operation == ">=" && temperature > minTemperature {
 				minTemperature = temperature
