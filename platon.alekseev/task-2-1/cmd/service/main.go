@@ -19,6 +19,8 @@ func main() {
 			if operation == ">=" && temperature > minTemperature {
 				minTemperature = temperature
 			}
+
+			fmt.Println(minTemperature)
 		}
 	}
 }
