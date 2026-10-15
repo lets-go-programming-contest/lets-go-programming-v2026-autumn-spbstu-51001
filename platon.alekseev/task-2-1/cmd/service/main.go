@@ -10,6 +10,7 @@ func main() {
 		var employeesCount int
 		fmt.Scan(&employeesCount)
 		minTemperature := 15
+		maxTemperature := 30
 
 		for employee := 0; employee < employeesCount; employee++ {
 			var operation string
@@ -18,6 +19,8 @@ func main() {
 
 			if operation == ">=" && temperature > minTemperature {
 				minTemperature = temperature
+			} else if operation == "<=" && temperature < maxTemperature {
+				maxTemperature = temperature
 			}
 
 			fmt.Println(minTemperature)
