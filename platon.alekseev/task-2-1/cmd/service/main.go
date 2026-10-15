@@ -23,7 +23,11 @@ func main() {
 				maxTemperature = temperature
 			}
 
-			fmt.Println(minTemperature)
+			if minTemperature > maxTemperature {
+				fmt.Println(-1)
+			} else {
+				fmt.Println(minTemperature)
+			}
 		}
 	}
 }
