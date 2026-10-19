@@ -38,7 +38,7 @@ func main() {
 	var offCount uint
 
 	if _, err := fmt.Scan(&offCount); err != nil || offCount == 0 || offCount > 1000 {
-		fmt.Println("offCount err:", errOffCount)
+		fmt.Println("Invalid argument:", errOffCount)
 
 		return
 	}
@@ -47,7 +47,7 @@ func main() {
 		var emplCount uint
 
 		if _, err := fmt.Scan(&emplCount); err != nil || emplCount == 0 || emplCount > 1000 {
-			fmt.Println("emplCount err:", errEmplCount)
+			fmt.Println("Invalid argument:", errEmplCount)
 
 			return
 		}
@@ -61,13 +61,13 @@ func main() {
 			)
 
 			if _, err := fmt.Scan(&operator, &temp); err != nil {
-				fmt.Println("input err:", err)
+				fmt.Println("input error:", err)
 
 				return
 			}
 
 			if operator != "<=" && operator != ">=" {
-				fmt.Println("operator err:", errOperator)
+				fmt.Println("operator error:", errOperator)
 
 				return
 			}
