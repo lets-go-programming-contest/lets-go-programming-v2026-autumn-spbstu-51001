@@ -7,7 +7,23 @@ const (
 	defaultMaxTemp = 30
 )
 
-func tempCalc() {}
+func tempCalc(op string, temp int, minTemp *int, maxTemp *int) int {
+	if op == ">=" {
+		if temp > *minTemp {
+			*minTemp = temp
+		}
+	} else if op == "<=" {
+		if temp < *maxTemp {
+			*maxTemp = temp
+		}
+	}
+
+	if *minTemp > *maxTemp {
+		return -1
+	}
+
+	return *minTemp
+}
 func main() {
 	var offCount uint
 
@@ -24,6 +40,7 @@ func main() {
 			return
 		}
 
+		minTemp, maxTemp := defaultMinTemp, defaultMaxTemp
 		for j := uint(0); j < emplCount; j++ {
 			var op string
 			var temp int
@@ -38,7 +55,7 @@ func main() {
 				return
 			}
 
-			fmt.Println(tempCalc())
+			fmt.Println(tempCalc(op, temp, &minTemp, &maxTemp))
 		}
 	}
 }
