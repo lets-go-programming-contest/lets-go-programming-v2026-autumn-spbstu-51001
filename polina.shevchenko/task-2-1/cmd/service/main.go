@@ -1,10 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 const (
 	defaultMinTemp = 15
 	defaultMaxTemp = 30
+)
+
+var (
+	errEmplCount = errors.New("employees count must be between 1 and 1000")
+	errOffCount  = errors.New("number of offices must be between 1 and 1000")
+	errOp        = errors.New("operator must be <= or >=")
 )
 
 func tempCalc(op string, temp int, minTemp *int, maxTemp *int) int {
@@ -24,11 +33,12 @@ func tempCalc(op string, temp int, minTemp *int, maxTemp *int) int {
 
 	return *minTemp
 }
+
 func main() {
 	var offCount uint
 
 	if _, err := fmt.Scan(&offCount); err != nil || offCount == 0 || offCount > 1000 {
-		fmt.Println()
+		fmt.Println("offCount err:", errOffCount)
 		return
 	}
 
@@ -36,7 +46,7 @@ func main() {
 		var emplCount uint
 
 		if _, err := fmt.Scan(&emplCount); err != nil || emplCount == 0 || emplCount > 1000 {
-			fmt.Println()
+			fmt.Println("emplCount err:", errEmplCount)
 			return
 		}
 
@@ -46,12 +56,12 @@ func main() {
 			var temp int
 
 			if _, err := fmt.Scan(&op, &temp); err != nil {
-				fmt.Println()
+				fmt.Println("input err:", err)
 				return
 			}
 
 			if op != "<=" && op != ">=" {
-				fmt.Println()
+				fmt.Println("operator err:", errOp)
 				return
 			}
 
