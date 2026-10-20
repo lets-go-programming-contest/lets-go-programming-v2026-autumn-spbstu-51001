@@ -6,6 +6,7 @@ func main() {
 	var departmentsCount int
 
 	if _, err := fmt.Scan(&departmentsCount); err != nil {
+		fmt.Println("Invalid departments count")
 		return
 	}
 
@@ -13,6 +14,7 @@ func main() {
 		var employeesCount int
 
 		if _, err := fmt.Scan(&employeesCount); err != nil {
+			fmt.Println("Invalid employees count")
 			return
 		}
 		if !processDepartment(employeesCount) {
@@ -31,7 +33,12 @@ func processDepartment(employeesCount int) bool {
 			temperature int
 		)
 
-		if _, err := fmt.Scan(&operation, &temperature); err != nil {
+		if _, err := fmt.Scan(&operation); err != nil {
+			fmt.Println("Invalid operation input")
+			return false
+		}
+		if _, err := fmt.Scan(&temperature); err != nil {
+			fmt.Println("Invalid temperature requirement")
 			return false
 		}
 
