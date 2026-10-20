@@ -2,6 +2,11 @@ package main
 
 import "fmt"
 
+const (
+	minAllowedTemperature = 15
+	maxAllowedTemperature = 30
+)
+
 func main() {
 	var departmentsCount int
 
@@ -24,8 +29,8 @@ func main() {
 }
 
 func processDepartment(employeesCount int) bool {
-	minTemperature := 15
-	maxTemperature := 30
+	minTemperature := minAllowedTemperature
+	maxTemperature := maxAllowedTemperature
 
 	for range employeesCount {
 		var (
