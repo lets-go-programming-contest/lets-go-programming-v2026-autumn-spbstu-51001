@@ -42,10 +42,18 @@ func processDepartment(employeesCount int) bool {
 			return false
 		}
 
-		if operation == ">=" && temperature > minTemperature {
-			minTemperature = temperature
-		} else if operation == "<=" && temperature < maxTemperature {
-			maxTemperature = temperature
+		switch operation {
+		case ">=":
+			if temperature > minTemperature {
+				minTemperature = temperature
+			}
+		case "<=":
+			if temperature < maxTemperature {
+				maxTemperature = temperature
+			}
+		default:
+			fmt.Println("Invalid operation")
+			return false
 		}
 
 		if minTemperature > maxTemperature {
