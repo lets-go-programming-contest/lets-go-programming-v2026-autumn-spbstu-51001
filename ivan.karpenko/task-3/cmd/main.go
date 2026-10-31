@@ -1,16 +1,25 @@
 package main
 
 import (
+	"cmp"
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
 	"golang.org/x/text/encoding/charmap"
+)
+
+const (
+	dirPerm  os.FileMode = 0o755
+	filePerm os.FileMode = 0o644
 )
 
 type Config struct {
@@ -32,14 +41,52 @@ type ValCurs struct {
 	Valutes []Valute `xml:"Valute"`
 }
 
+type CurrencyOut struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
+}
+
 func (f *commaFloat) UnmarshalText(b []byte) error {
 	s := strings.Replace(strings.TrimSpace(string(b)), ",", ".", 1)
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return fmt.Errorf("parse value %q: %w", b, err)
 	}
+
 	*f = commaFloat(v)
+
 	return nil
+}
+
+func SortByValueDesc(vs []Valute) {
+	slices.SortFunc(vs, func(a, b Valute) int {
+		return cmp.Compare(b.Value, a.Value)
+	})
+}
+
+func WriteJSON(path string, vs []Valute) {
+	out := make([]CurrencyOut, 0, len(vs))
+	for _, v := range vs {
+		out = append(out, CurrencyOut{
+			NumCode:  v.NumCode,
+			CharCode: v.CharCode,
+			Value:    float64(v.Value),
+		})
+	}
+
+	data, err := json.MarshalIndent(out, "", "    ")
+	if err != nil {
+		panic(fmt.Errorf("encode json: %w", err))
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), dirPerm); err != nil {
+		panic(fmt.Errorf("create dir for %q: %w", path, err))
+	}
+
+	if err := os.WriteFile(path, data, filePerm); err != nil {
+		panic(fmt.Errorf("write output %q: %w", path, err))
+	}
 }
 
 func ReadXML(path string) []Valute {
@@ -109,5 +156,7 @@ func main() {
 
 	cfg := LoadConfig(*configPath)
 	valutes := ReadXML(cfg.InputFile)
+	SortByValueDesc(valutes)
+	WriteJSON(cfg.OutputFile, valutes)
 
 }
