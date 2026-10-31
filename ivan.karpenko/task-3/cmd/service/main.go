@@ -112,11 +112,6 @@ func ReadXML(path string) []Valute {
 	if len(vc.Valutes) == 0 {
 		panic("xml: no <Valute> elements")
 	}
-	for i, v := range vc.Valutes {
-		if v.NumCode == 0 || v.CharCode == "" {
-			panic(fmt.Sprintf("xml: valute #%d has empty NumCode or CharCode", i))
-		}
-	}
 
 	return vc.Valutes
 }
