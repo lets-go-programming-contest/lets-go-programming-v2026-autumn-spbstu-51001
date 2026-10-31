@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -21,6 +23,8 @@ const (
 	dirPerm  os.FileMode = 0o755
 	filePerm os.FileMode = 0o644
 )
+
+var errUnsupportedCharset = errors.New("unsupported charset")
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
@@ -49,6 +53,7 @@ type CurrencyOut struct {
 
 func (f *commaFloat) UnmarshalText(b []byte) error {
 	s := strings.Replace(strings.TrimSpace(string(b)), ",", ".", 1)
+
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return fmt.Errorf("parse value %q: %w", b, err)
@@ -90,30 +95,30 @@ func WriteJSON(path string, vs []Valute) {
 }
 
 func ReadXML(path string) []Valute {
-	file, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		panic(fmt.Errorf("open input %q: %w", path, err))
+		panic(fmt.Errorf("read input %q: %w", path, err))
 	}
-	defer file.Close()
 
-	dec := xml.NewDecoder(file)
+	dec := xml.NewDecoder(bytes.NewReader(data))
 	dec.CharsetReader = func(label string, input io.Reader) (io.Reader, error) {
 		if strings.EqualFold(label, "windows-1251") {
 			return charmap.Windows1251.NewDecoder().Reader(input), nil
 		}
-		return nil, fmt.Errorf("unsupported charset %q", label)
+
+		return nil, fmt.Errorf("%w: %q", errUnsupportedCharset, label)
 	}
 
-	var vc ValCurs
-	if err := dec.Decode(&vc); err != nil {
+	var valCurs ValCurs
+	if err := dec.Decode(&valCurs); err != nil {
 		panic(fmt.Errorf("decode xml %q: %w", path, err))
 	}
 
-	if len(vc.Valutes) == 0 {
+	if len(valCurs.Valutes) == 0 {
 		panic("xml: no <Valute> elements")
 	}
 
-	return vc.Valutes
+	return valCurs.Valutes
 }
 
 func LoadConfig(path string) Config {
@@ -153,5 +158,4 @@ func main() {
 	valutes := ReadXML(cfg.InputFile)
 	SortByValueDesc(valutes)
 	WriteJSON(cfg.OutputFile, valutes)
-
 }
