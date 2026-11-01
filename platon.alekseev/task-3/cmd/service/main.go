@@ -24,7 +24,12 @@ const (
 	filePermissions      = 0o644
 )
 
-var errUnsupportedCharset = errors.New("unsupported XML charset")
+var (
+	errEmptyConfigPath    = errors.New("config path is empty")
+	errEmptyInputPath     = errors.New("input-file is empty")
+	errEmptyOutputPath    = errors.New("output-file is empty")
+	errUnsupportedCharset = errors.New("unsupported XML charset")
+)
 
 type config struct {
 	InputFile  string `yaml:"input-file"`
@@ -34,6 +39,8 @@ type config struct {
 type xmlCurrency struct {
 	NumCode  string `xml:"NumCode"`
 	CharCode string `xml:"CharCode"`
+	Nominal  int    `xml:"Nominal"`
+	Name     string `xml:"Name"`
 	Value    string `xml:"Value"`
 }
 
@@ -49,6 +56,10 @@ type currency struct {
 }
 
 func loadConfig(path string) (config, error) {
+	if strings.TrimSpace(path) == "" {
+		return config{}, errEmptyConfigPath
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return config{}, fmt.Errorf("read config %q: %w", path, err)
@@ -59,16 +70,33 @@ func loadConfig(path string) (config, error) {
 		return config{}, fmt.Errorf("parse config %q: %w", path, err)
 	}
 
+	settings.InputFile = strings.TrimSpace(settings.InputFile)
+	settings.OutputFile = strings.TrimSpace(settings.OutputFile)
+
+	if settings.InputFile == "" {
+		return config{}, errEmptyInputPath
+	}
+
+	if settings.OutputFile == "" {
+		return config{}, errEmptyOutputPath
+	}
+
 	return settings, nil
 }
 
-func loadCurrencies(path string) ([]currency, error) {
-	data, err := os.ReadFile(path)
+func parseValue(text string) (float64, error) {
+	normalized := strings.Replace(strings.TrimSpace(text), ",", ".", 1)
+
+	value, err := strconv.ParseFloat(normalized, 64)
 	if err != nil {
-		return nil, fmt.Errorf("read input %q: %w", path, err)
+		return 0, fmt.Errorf("parse currency value %q: %w", text, err)
 	}
 
-	decoder := xml.NewDecoder(bytes.NewReader(data))
+	return value, nil
+}
+
+func decodeCurrencies(input io.Reader) ([]currency, error) {
+	decoder := xml.NewDecoder(input)
 	decoder.CharsetReader = func(label string, source io.Reader) (io.Reader, error) {
 		switch strings.ToLower(label) {
 		case "windows-1251":
@@ -85,7 +113,7 @@ func loadCurrencies(path string) ([]currency, error) {
 		return nil, fmt.Errorf("decode currencies: %w", err)
 	}
 
-	values := make([]currency, 0, len(rates.Valutes))
+	result := make([]currency, 0, len(rates.Valutes))
 
 	for index, item := range rates.Valutes {
 		numCode := 0
@@ -99,21 +127,42 @@ func loadCurrencies(path string) ([]currency, error) {
 			numCode = parsed
 		}
 
-		normalized := strings.Replace(strings.TrimSpace(item.Value), ",", ".", 1)
-
-		value, err := strconv.ParseFloat(normalized, 64)
+		value, err := parseValue(item.Value)
 		if err != nil {
-			return nil, fmt.Errorf("currency %d value: %w", index+1, err)
+			return nil, fmt.Errorf("currency %d: %w", index+1, err)
 		}
 
-		values = append(values, currency{
+		result = append(result, currency{
 			NumCode:  numCode,
 			CharCode: item.CharCode,
 			Value:    value,
 		})
 	}
 
-	return values, nil
+	return result, nil
+}
+
+func sortCurrencies(values []currency) {
+	slices.SortStableFunc(values, func(left, right currency) int {
+		return cmp.Compare(right.Value, left.Value)
+	})
+}
+
+func writeJSON(path string, values []currency) error {
+	data, err := json.MarshalIndent(values, "", "    ")
+	if err != nil {
+		return fmt.Errorf("encode currencies: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), directoryPermissions); err != nil {
+		return fmt.Errorf("create output directory: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, filePermissions); err != nil {
+		return fmt.Errorf("write output %q: %w", path, err)
+	}
+
+	return nil
 }
 
 func run(configPath string) error {
@@ -122,29 +171,19 @@ func run(configPath string) error {
 		return err
 	}
 
-	values, err := loadCurrencies(settings.InputFile)
+	data, err := os.ReadFile(settings.InputFile)
+	if err != nil {
+		return fmt.Errorf("read input %q: %w", settings.InputFile, err)
+	}
+
+	values, err := decodeCurrencies(bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
 
-	slices.SortStableFunc(values, func(left, right currency) int {
-		return cmp.Compare(right.Value, left.Value)
-	})
+	sortCurrencies(values)
 
-	data, err := json.MarshalIndent(values, "", "    ")
-	if err != nil {
-		return fmt.Errorf("encode currencies: %w", err)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(settings.OutputFile), directoryPermissions); err != nil {
-		return fmt.Errorf("create output directory: %w", err)
-	}
-
-	if err := os.WriteFile(settings.OutputFile, data, filePermissions); err != nil {
-		return fmt.Errorf("write output %q: %w", settings.OutputFile, err)
-	}
-
-	return nil
+	return writeJSON(settings.OutputFile, values)
 }
 
 func main() {
