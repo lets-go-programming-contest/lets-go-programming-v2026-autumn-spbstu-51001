@@ -20,7 +20,7 @@ import (
 
 const (
 	directoryPermissions = 0o755
-	filePermissions      = 0o644
+	filePermissions      = 0o600
 )
 
 var (
