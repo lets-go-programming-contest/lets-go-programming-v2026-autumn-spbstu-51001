@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"cmp"
 	"encoding/json"
 	"encoding/xml"
@@ -148,6 +147,26 @@ func sortCurrencies(values []currency) {
 	})
 }
 
+func readCurrencies(path string) ([]currency, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open input %q: %w", path, err)
+	}
+
+	values, decodeErr := decodeCurrencies(file)
+	closeErr := file.Close()
+
+	if decodeErr != nil {
+		return nil, decodeErr
+	}
+
+	if closeErr != nil {
+		return nil, fmt.Errorf("close input %q: %w", path, closeErr)
+	}
+
+	return values, nil
+}
+
 func writeJSON(path string, values []currency) error {
 	data, err := json.MarshalIndent(values, "", "    ")
 	if err != nil {
@@ -171,12 +190,7 @@ func run(configPath string) error {
 		return err
 	}
 
-	data, err := os.ReadFile(settings.InputFile)
-	if err != nil {
-		return fmt.Errorf("read input %q: %w", settings.InputFile, err)
-	}
-
-	values, err := decodeCurrencies(bytes.NewReader(data))
+	values, err := readCurrencies(settings.InputFile)
 	if err != nil {
 		return err
 	}
