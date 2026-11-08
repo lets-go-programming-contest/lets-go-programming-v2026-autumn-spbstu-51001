@@ -1,4 +1,4 @@
-package serviceConfig
+package config
 
 import (
 	"os"

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"sort"
 
-	serviceConfig "github.com/CWSHBR/task-3/internal/config"
+	"github.com/CWSHBR/task-3/internal/config"
 	"github.com/CWSHBR/task-3/internal/input"
 	"github.com/CWSHBR/task-3/internal/output"
 )
@@ -17,12 +17,12 @@ func main() {
 		panic("provide a config file in -config <filepath> format")
 	}
 
-	config, err := serviceConfig.ReadConfig(*configPath)
+	cfg, err := config.ReadConfig(*configPath)
 	if err != nil {
 		panic("an error occurred while reading config: " + err.Error())
 	}
 
-	currencies, err := input.InputFile(config.InputFile)
+	currencies, err := input.InputFile(cfg.InputFile)
 	if err != nil {
 		panic("an error occurred while reading currencies data: " + err.Error())
 	}
@@ -31,7 +31,7 @@ func main() {
 		return currencies[i].Value > currencies[j].Value
 	})
 
-	err = output.WriteFile(config.OutputFile, currencies)
+	err = output.WriteFile(cfg.OutputFile, currencies)
 	if err != nil {
 		panic("an error occurred while writing sorted currencies data: " + err.Error())
 	}
