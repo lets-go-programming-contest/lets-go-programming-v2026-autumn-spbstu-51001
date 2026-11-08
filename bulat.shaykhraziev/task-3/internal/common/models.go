@@ -5,3 +5,8 @@ type Currency struct {
 	CharCode string `xml:"CharCode" json:"char_code"`
 	Value    string `xml:"Value" json:"value"`
 }
+
+type Config struct {
+	InputFile  string `yaml:"input-file"`
+	OutputFile string `yaml:"output-file"`
+}
