@@ -12,7 +12,7 @@ type CurrencyValue uint64
 
 const scale = 4
 
-func (cv *CurrencyValue) UnmarshallText(b []byte) error {
+func (cv *CurrencyValue) UnmarshalText(b []byte) error {
 	s := strings.TrimSpace(string(b))
 	if strings.HasPrefix(s, "-") {
 		return errors.New("negative numbers cannot be CurrencyValue")
