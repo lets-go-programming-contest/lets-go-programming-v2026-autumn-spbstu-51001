@@ -14,7 +14,7 @@ func WriteFile(path string, data []common.Currency) error {
 		return err
 	}
 
-	fileData, err := json.Marshal(data)
+	fileData, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		return err
 	}
