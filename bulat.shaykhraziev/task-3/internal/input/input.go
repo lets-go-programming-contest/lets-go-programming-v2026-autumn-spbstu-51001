@@ -1,7 +1,9 @@
 package input
 
 import (
+	"bytes"
 	"encoding/xml"
+	"fmt"
 	"os"
 
 	"github.com/CWSHBR/task-3/internal/common"
@@ -9,19 +11,19 @@ import (
 )
 
 func InputFile(filePath string) ([]common.Currency, error) {
-	file, err := os.Open(filePath)
+	rawData, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read input file: %w", err)
 	}
-	defer file.Close()
 
-	decoder := xml.NewDecoder(file)
+	decoder := xml.NewDecoder(bytes.NewReader(rawData))
 	decoder.CharsetReader = charset.NewReaderLabel
 
 	var data common.CurrencyList
+
 	err = decoder.Decode(&data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode input xml: %w", err)
 	}
 
 	return data.Currencies, nil

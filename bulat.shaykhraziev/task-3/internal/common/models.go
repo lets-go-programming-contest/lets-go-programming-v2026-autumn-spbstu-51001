@@ -1,9 +1,9 @@
 package common
 
 type Currency struct {
-	NumCode  uint16        `xml:"NumCode" json:"num_code"`
-	CharCode string        `xml:"CharCode" json:"char_code"`
-	Value    CurrencyValue `xml:"Value" json:"value"`
+	NumCode  uint16        `json:"num_code"  xml:"NumCode"`
+	CharCode string        `json:"char_code" xml:"CharCode"`
+	Value    CurrencyValue `json:"value"     xml:"Value"`
 }
 
 type CurrencyList struct {
