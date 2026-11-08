@@ -24,5 +24,5 @@ func InputFile(filePath string) ([]common.Currency, error) {
 		return nil, err
 	}
 
-	return data.Currencies, err
+	return data.Currencies, nil
 }
