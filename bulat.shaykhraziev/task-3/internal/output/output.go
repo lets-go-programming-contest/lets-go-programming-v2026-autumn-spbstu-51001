@@ -3,33 +3,13 @@ package output
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 
 	"github.com/CWSHBR/task-3/internal/common"
 )
 
-func checkFile(filepath string) error {
-	f, openErr := os.Open(filepath)
-	if openErr != nil {
-		f, crErr := os.Create(filepath)
-		if crErr != nil {
-			return crErr
-		}
-		closeErr := f.Close()
-		if closeErr != nil {
-			return closeErr
-		}
-	}
-
-	closeErr := f.Close()
-	if closeErr != nil {
-		return closeErr
-	}
-
-	return nil
-}
-
-func WriteFile(filepath string, data []common.Currency) error {
-	err := checkFile(filepath)
+func WriteFile(path string, data []common.Currency) error {
+	err := os.MkdirAll(filepath.Dir(path), 0o755)
 	if err != nil {
 		return err
 	}
@@ -39,7 +19,7 @@ func WriteFile(filepath string, data []common.Currency) error {
 		return err
 	}
 
-	err = os.WriteFile(filepath, fileData, 0666)
+	err = os.WriteFile(path, fileData, 0o644)
 	if err != nil {
 		return err
 	}
