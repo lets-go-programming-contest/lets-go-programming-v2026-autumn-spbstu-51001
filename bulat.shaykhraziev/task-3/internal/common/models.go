@@ -7,7 +7,7 @@ type Currency struct {
 }
 
 type CurrencyList struct {
-	Currencies []Currency `xml:"ValCurs>Valute"`
+	Currencies []Currency `xml:"Valute"`
 }
 
 type Config struct {
