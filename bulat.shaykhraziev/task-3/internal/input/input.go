@@ -13,11 +13,11 @@ func InputFile(filePath string) ([]common.Currency, error) {
 		return nil, err
 	}
 
-	var data []common.Currency
+	var data common.CurrencyList
 	err = xml.Unmarshal(rawData, &data)
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, err
+	return data.Currencies, err
 }
