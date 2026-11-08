@@ -20,7 +20,9 @@ func (cv *CurrencyValue) UnmarshalText(b []byte) error {
 
 	intPart, fracPart, _ := strings.Cut(s, ",")
 
-	fracPart = fracPart[:scale]
+	if len(fracPart) > scale {
+		fracPart = fracPart[:scale]
+	}
 	fracPart += strings.Repeat("0", scale-len(fracPart))
 
 	n, err := strconv.ParseUint(intPart+fracPart, 10, 64)
