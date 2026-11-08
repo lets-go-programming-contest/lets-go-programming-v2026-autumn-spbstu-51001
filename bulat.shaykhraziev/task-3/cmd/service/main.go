@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"flag"
 	"sort"
 
 	serviceConfig "github.com/CWSHBR/task-3/internal/config"
@@ -10,11 +10,14 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 3 || os.Args[1] == "-config" {
+	configPath := flag.String("config", "", "path to the YAML config file")
+	flag.Parse()
+
+	if *configPath == "" {
 		panic("provide a config file in -config <filepath> format")
 	}
 
-	config, err := serviceConfig.ReadConfig(os.Args[2])
+	config, err := serviceConfig.ReadConfig(*configPath)
 	if err != nil {
 		panic("an error occurred while reading config: " + err.Error())
 	}
