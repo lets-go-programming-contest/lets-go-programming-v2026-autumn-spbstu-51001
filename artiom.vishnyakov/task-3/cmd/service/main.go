@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,7 +49,7 @@ func main() {
 	cfg := loadConfig(*configPath)
 	currencies := loadCurrencies(cfg.InputFile)
 
-	fmt.Printf("parsed %d currencies, output=%s\n", len(currencies), cfg.OutputFile)
+	writeJSON(cfg.OutputFile, currencies)
 }
 
 func loadConfig(path string) Config {
@@ -109,6 +111,28 @@ func loadCurrencies(path string) []Currency {
 	})
 
 	return result
+}
+
+func writeJSON(path string, data any) {
+	dir := filepath.Dir(path)
+	if dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			panic(fmt.Errorf("create output directory %q: %w", dir, err))
+		}
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		panic(fmt.Errorf("create output file %q: %w", path, err))
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	if err := encoder.Encode(data); err != nil {
+		panic(fmt.Errorf("encode JSON: %w", err))
+	}
 }
 
 func charsetReader(charset string, input io.Reader) (io.Reader, error) {
