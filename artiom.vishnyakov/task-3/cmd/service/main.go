@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -16,6 +17,10 @@ import (
 	"golang.org/x/text/transform"
 	"gopkg.in/yaml.v3"
 )
+
+const outputDirPerm os.FileMode = 0o755
+
+var errUnsupportedCharset = errors.New("unsupported charset")
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
@@ -75,7 +80,12 @@ func loadCurrencies(path string) []Currency {
 	if err != nil {
 		panic(fmt.Errorf("open XML %q: %w", path, err))
 	}
-	defer file.Close()
+
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			panic(fmt.Errorf("close XML %q: %w", path, closeErr))
+		}
+	}()
 
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = charsetReader
@@ -87,21 +97,30 @@ func loadCurrencies(path string) []Currency {
 
 	result := make([]Currency, 0, len(doc.Valutes))
 
-	for _, v := range doc.Valutes {
-		numCode, err := strconv.Atoi(strings.TrimSpace(v.NumCode))
-		if err != nil {
-			panic(fmt.Errorf("parse NumCode %q: %w", v.NumCode, err))
+	for _, valute := range doc.Valutes {
+		numCodeText := strings.TrimSpace(valute.NumCode)
+		charCode := strings.TrimSpace(valute.CharCode)
+		valueText := strings.TrimSpace(valute.Value)
+
+		if numCodeText == "" || charCode == "" || valueText == "" {
+			continue
 		}
 
-		valueText := strings.Replace(strings.TrimSpace(v.Value), ",", ".", 1)
+		numCode, err := strconv.Atoi(numCodeText)
+		if err != nil {
+			panic(fmt.Errorf("parse NumCode %q: %w", valute.NumCode, err))
+		}
+
+		valueText = strings.Replace(valueText, ",", ".", 1)
+
 		value, err := strconv.ParseFloat(valueText, 64)
 		if err != nil {
-			panic(fmt.Errorf("parse Value %q: %w", v.Value, err))
+			panic(fmt.Errorf("parse Value %q: %w", valute.Value, err))
 		}
 
 		result = append(result, Currency{
 			NumCode:  numCode,
-			CharCode: strings.TrimSpace(v.CharCode),
+			CharCode: charCode,
 			Value:    value,
 		})
 	}
@@ -116,7 +135,7 @@ func loadCurrencies(path string) []Currency {
 func writeJSON(path string, data any) {
 	dir := filepath.Dir(path)
 	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, outputDirPerm); err != nil {
 			panic(fmt.Errorf("create output directory %q: %w", dir, err))
 		}
 	}
@@ -125,7 +144,12 @@ func writeJSON(path string, data any) {
 	if err != nil {
 		panic(fmt.Errorf("create output file %q: %w", path, err))
 	}
-	defer file.Close()
+
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			panic(fmt.Errorf("close output file %q: %w", path, closeErr))
+		}
+	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
@@ -140,6 +164,6 @@ func charsetReader(charset string, input io.Reader) (io.Reader, error) {
 	case "windows-1251", "cp1251":
 		return transform.NewReader(input, charmap.Windows1251.NewDecoder()), nil
 	default:
-		return nil, fmt.Errorf("unsupported charset %q", charset)
+		return nil, fmt.Errorf("%w: %q", errUnsupportedCharset, charset)
 	}
 }
