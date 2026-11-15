@@ -99,23 +99,35 @@ func loadCurrencies(path string) []Currency {
 
 	for _, valute := range doc.Valutes {
 		numCodeText := strings.TrimSpace(valute.NumCode)
+
 		charCode := strings.TrimSpace(valute.CharCode)
+
 		valueText := strings.TrimSpace(valute.Value)
 
-		if numCodeText == "" || charCode == "" || valueText == "" {
+		if numCodeText == "" && charCode == "" && valueText == "" {
 			continue
 		}
 
-		numCode, err := strconv.Atoi(numCodeText)
-		if err != nil {
-			panic(fmt.Errorf("parse NumCode %q: %w", valute.NumCode, err))
+		numCode := 0
+		if numCodeText != "" {
+			parsedNumCode, err := strconv.Atoi(numCodeText)
+			if err != nil {
+				panic(fmt.Errorf("parse NumCode %q: %w", valute.NumCode, err))
+			}
+
+			numCode = parsedNumCode
 		}
 
-		valueText = strings.Replace(valueText, ",", ".", 1)
+		value := 0.0
+		if valueText != "" {
+			normalizedValue := strings.Replace(valueText, ",", ".", 1)
 
-		value, err := strconv.ParseFloat(valueText, 64)
-		if err != nil {
-			panic(fmt.Errorf("parse Value %q: %w", valute.Value, err))
+			parsedValue, err := strconv.ParseFloat(normalizedValue, 64)
+			if err != nil {
+				panic(fmt.Errorf("parse Value %q: %w", valute.Value, err))
+			}
+
+			value = parsedValue
 		}
 
 		result = append(result, Currency{
