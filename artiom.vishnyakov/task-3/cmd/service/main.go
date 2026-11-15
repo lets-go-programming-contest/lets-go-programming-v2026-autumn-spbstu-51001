@@ -98,14 +98,8 @@ func loadCurrencies(path string) []Currency {
 	result := make([]Currency, 0, len(doc.Valutes))
 
 	for _, valute := range doc.Valutes {
-		currency, ok := parseValute(valute)
-		if !ok {
-			continue
-		}
-
-		result = append(result, currency)
+		result = append(result, parseValute(valute))
 	}
-
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Value > result[j].Value
 	})
@@ -113,16 +107,18 @@ func loadCurrencies(path string) []Currency {
 	return result
 }
 
-func parseValute(valute Valute) (Currency, bool) {
+func isEmptyValute(valute Valute) bool {
+	return strings.TrimSpace(valute.NumCode) == "" &&
+		strings.TrimSpace(valute.CharCode) == "" &&
+		strings.TrimSpace(valute.Value) == ""
+}
+
+func parseValute(valute Valute) Currency {
 	numCodeText := strings.TrimSpace(valute.NumCode)
 
 	charCode := strings.TrimSpace(valute.CharCode)
 
 	valueText := strings.TrimSpace(valute.Value)
-
-	if numCodeText == "" && charCode == "" && valueText == "" {
-		return Currency{}, false
-	}
 
 	numCode, err := parseNumCode(numCodeText, valute.NumCode)
 	if err != nil {
@@ -138,7 +134,7 @@ func parseValute(valute Valute) (Currency, bool) {
 		NumCode:  numCode,
 		CharCode: charCode,
 		Value:    value,
-	}, true
+	}
 }
 
 func parseNumCode(text, original string) (int, error) {
