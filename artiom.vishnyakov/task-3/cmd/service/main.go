@@ -100,17 +100,12 @@ func loadCurrencies(path string) []Currency {
 	for _, valute := range doc.Valutes {
 		result = append(result, parseValute(valute))
 	}
+
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Value > result[j].Value
 	})
 
 	return result
-}
-
-func isEmptyValute(valute Valute) bool {
-	return strings.TrimSpace(valute.NumCode) == "" &&
-		strings.TrimSpace(valute.CharCode) == "" &&
-		strings.TrimSpace(valute.Value) == ""
 }
 
 func parseValute(valute Valute) Currency {
