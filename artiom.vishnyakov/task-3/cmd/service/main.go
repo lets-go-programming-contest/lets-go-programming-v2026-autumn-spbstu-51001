@@ -98,43 +98,12 @@ func loadCurrencies(path string) []Currency {
 	result := make([]Currency, 0, len(doc.Valutes))
 
 	for _, valute := range doc.Valutes {
-		numCodeText := strings.TrimSpace(valute.NumCode)
-
-		charCode := strings.TrimSpace(valute.CharCode)
-
-		valueText := strings.TrimSpace(valute.Value)
-
-		if numCodeText == "" && charCode == "" && valueText == "" {
+		currency, ok := parseValute(valute)
+		if !ok {
 			continue
 		}
 
-		numCode := 0
-		if numCodeText != "" {
-			parsedNumCode, err := strconv.Atoi(numCodeText)
-			if err != nil {
-				panic(fmt.Errorf("parse NumCode %q: %w", valute.NumCode, err))
-			}
-
-			numCode = parsedNumCode
-		}
-
-		value := 0.0
-		if valueText != "" {
-			normalizedValue := strings.Replace(valueText, ",", ".", 1)
-
-			parsedValue, err := strconv.ParseFloat(normalizedValue, 64)
-			if err != nil {
-				panic(fmt.Errorf("parse Value %q: %w", valute.Value, err))
-			}
-
-			value = parsedValue
-		}
-
-		result = append(result, Currency{
-			NumCode:  numCode,
-			CharCode: charCode,
-			Value:    value,
-		})
+		result = append(result, currency)
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -142,6 +111,62 @@ func loadCurrencies(path string) []Currency {
 	})
 
 	return result
+}
+
+func parseValute(valute Valute) (Currency, bool) {
+	numCodeText := strings.TrimSpace(valute.NumCode)
+
+	charCode := strings.TrimSpace(valute.CharCode)
+
+	valueText := strings.TrimSpace(valute.Value)
+
+	if numCodeText == "" && charCode == "" && valueText == "" {
+		return Currency{}, false
+	}
+
+	numCode, err := parseNumCode(numCodeText, valute.NumCode)
+	if err != nil {
+		panic(err)
+	}
+
+	value, err := parseValue(valueText, valute.Value)
+	if err != nil {
+		panic(err)
+	}
+
+	return Currency{
+		NumCode:  numCode,
+		CharCode: charCode,
+		Value:    value,
+	}, true
+}
+
+func parseNumCode(text, original string) (int, error) {
+	if text == "" {
+		return 0, nil
+	}
+
+	parsed, err := strconv.Atoi(text)
+	if err != nil {
+		return 0, fmt.Errorf("parse NumCode %q: %w", original, err)
+	}
+
+	return parsed, nil
+}
+
+func parseValue(text, original string) (float64, error) {
+	if text == "" {
+		return 0, nil
+	}
+
+	normalized := strings.Replace(text, ",", ".", 1)
+
+	parsed, err := strconv.ParseFloat(normalized, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse Value %q: %w", original, err)
+	}
+
+	return parsed, nil
 }
 
 func writeJSON(path string, data any) {
