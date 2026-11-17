@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"golang.org/x/text/encoding/charmap"
@@ -12,9 +14,9 @@ import (
 )
 
 type Valute struct {
-	NumCode  int     `xml:"NumCode"`
-	CharCode string  `xml:"CharCode"`
-	Value    float64 `xml:"Value"`
+	NumCode  int     `xml:"NumCode" json:"num_code"`
+	CharCode string  `xml:"CharCode" json:"char_code"`
+	Value    float64 `xml:"Value" json:"value"`
 }
 
 type ValCurs struct {
@@ -66,4 +68,21 @@ func sortValutes(valutes []Valute) {
 	sort.Slice(valutes, func(i, j int) bool {
 		return valutes[i].Value > valutes[j].Value
 	})
+}
+
+func saveJSON(path string, valutes []Valute) {
+	err := os.MkdirAll(filepath.Dir(path), 0755)
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := json.MarshalIndent(valutes, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		panic(err)
+	}
 }
