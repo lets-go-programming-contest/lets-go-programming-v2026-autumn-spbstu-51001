@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"io"
 	"os"
+	"sort"
 
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/yaml.v3"
@@ -59,4 +60,10 @@ func readValutes(path string) []Valute {
 	}
 
 	return valCurs.Valutes
+}
+
+func sortValutes(valutes []Valute) {
+	sort.Slice(valutes, func(i, j int) bool {
+		return valutes[i].Value > valutes[j].Value
+	})
 }
