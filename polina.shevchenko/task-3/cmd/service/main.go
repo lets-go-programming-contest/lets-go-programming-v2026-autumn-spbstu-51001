@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -24,6 +25,13 @@ type ValCurs struct {
 }
 
 func main() {
+	configPath := flag.String("config", "", "путь до config.yaml")
+	flag.Parse()
+
+	config := readConfig(*configPath)
+	valutes := readValutes(config["input-file"])
+	sortValutes(valutes)
+	saveJSON(config["output-file"], valutes)
 }
 
 func readConfig(path string) map[string]string {
