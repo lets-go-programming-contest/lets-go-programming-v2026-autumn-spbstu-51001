@@ -14,10 +14,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	dirPermissions  = 0o755
+	filePermissions = 0o600
+)
+
 type Valute struct {
-	NumCode  int     `xml:"NumCode" json:"num_code"`
-	CharCode string  `xml:"CharCode" json:"char_code"`
-	Value    float64 `xml:"Value" json:"value"`
+	NumCode  int     `json:"num_code"  xml:"NumCode"`
+	CharCode string  `json:"char_code" xml:"CharCode"`
+	Value    float64 `json:"value"     xml:"Value"`
 }
 
 type ValCurs struct {
@@ -41,6 +46,7 @@ func readConfig(path string) map[string]string {
 	}
 
 	config := map[string]string{}
+
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		panic(err)
@@ -64,6 +70,7 @@ func readValutes(path string) []Valute {
 	}
 
 	var valCurs ValCurs
+
 	err = decoder.Decode(&valCurs)
 	if err != nil {
 		panic(err)
@@ -79,7 +86,7 @@ func sortValutes(valutes []Valute) {
 }
 
 func saveJSON(path string, valutes []Valute) {
-	err := os.MkdirAll(filepath.Dir(path), 0755)
+	err := os.MkdirAll(filepath.Dir(path), dirPermissions)
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +96,7 @@ func saveJSON(path string, valutes []Valute) {
 		panic(err)
 	}
 
-	err = os.WriteFile(path, data, 0644)
+	err = os.WriteFile(path, data, filePermissions)
 	if err != nil {
 		panic(err)
 	}
