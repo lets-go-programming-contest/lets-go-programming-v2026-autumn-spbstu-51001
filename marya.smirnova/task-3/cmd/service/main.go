@@ -86,13 +86,14 @@ func readXML(filename string) ([]Currency, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open XML file: %w", err)
 	}
+
+	var data ValCurs
+
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
 			fmt.Fprintf(os.Stderr, "failed to close XML file: %v\n", closeErr)
 		}
 	}()
-
-	var data ValCurs
 
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
