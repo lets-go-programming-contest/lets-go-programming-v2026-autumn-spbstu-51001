@@ -13,3 +13,8 @@ type Valute struct {
 	Value string `xml:"Value"`
 	VunitRate string `xml:"VunitRate"`	
 }
+
+type ValCurs struct {
+	Date string `xml:"Date,attr"`
+	Valutes []Valute `xml:"Valute"`
+}
