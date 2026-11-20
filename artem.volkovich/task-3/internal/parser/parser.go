@@ -28,7 +28,6 @@ func valueToFloat(value string) float64 {
 
 func getFilenames(yamlPath string) (string, string) {
 	data, err := os.ReadFile(yamlPath)
-
 	if err != nil {
 		panic(fmt.Errorf("error while reading config %q\n %w", yamlPath, err))
 	}
@@ -91,8 +90,8 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 		panic(err)
 	}
 
-	err = os.MkdirAll(filepath.Dir(outputFilename), 0600)
-	
+	dir := filepath.Dir(outputFilename)
+	err = os.MkdirAll(dir, 0600)
 	if err != nil {
 		panic(err)
 	}
