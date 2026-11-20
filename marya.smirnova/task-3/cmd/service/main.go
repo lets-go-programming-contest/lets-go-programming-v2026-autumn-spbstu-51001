@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -74,22 +76,16 @@ func readXML(filename string) ([]Currency, error) {
 	}
 	defer file.Close()
 
-	var raw struct {
-		Currencies []struct {
-			NumCode  int    `xml:"NumCode"`
-			CharCode string `xml:"CharCode"`
-			Value    string `xml:"Value"`
-		} `xml:"Valute"`
-	}
+	var data ValCurs
 
 	decoder := xml.NewDecoder(file)
-	if err := decoder.Decode(&raw); err != nil {
+	if err := decoder.Decode(&data); err != nil {
 		return nil, fmt.Errorf("failed to decode XML: %w", err)
 	}
 
-	currencies := make([]Currency, 0, len(raw.Currencies))
+	currencies := make([]Currency, 0, len(data.Valutes))
 
-	for _, item := range raw.Currencies {
+	for _, item := range data.Valutes {
 		value, err := parseValue(item.Value)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value for %s: %w", item.CharCode, err)
@@ -103,6 +99,33 @@ func readXML(filename string) ([]Currency, error) {
 	}
 
 	return currencies, nil
+}
+
+func writeJSON(filename string, currencies []Currency) (err error) {
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close output file: %w", closeErr))
+		}
+	}()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	if err := encoder.Encode(currencies); err != nil {
+		return fmt.Errorf("failed to encode JSON: %w", err)
+	}
+
+	return nil
 }
 
 func main() {
@@ -126,4 +149,10 @@ func main() {
 	}
 
 	fmt.Printf("Successfully parsed %d currencies\n", len(currencies))
+
+	if err := writeJSON(config.OutputFile, currencies); err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Successfully saved currencies to %s\n", config.OutputFile)
 }
