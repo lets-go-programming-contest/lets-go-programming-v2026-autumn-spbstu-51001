@@ -6,13 +6,21 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/transform"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	errInputFileRequired  = errors.New("input-file is required")
+	errOutputFileRequired = errors.New("output-file is required")
 )
 
 type Config struct {
@@ -56,6 +64,14 @@ func loadConfig(filename string) (Config, error) {
 		return Config{}, errors.New("output-file is required")
 	}
 
+	if config.InputFile == "" {
+		return Config{}, errInputFileRequired
+	}
+
+	if config.OutputFile == "" {
+		return Config{}, errOutputFileRequired
+	}
+
 	return config, nil
 }
 
@@ -70,26 +86,33 @@ func parseValue(s string) (float64, error) {
 	return value, nil
 }
 
-func readXML(filename string) (currencies []Currency, err error) {
+func readXML(filename string) ([]Currency, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open XML file: %w", err)
 	}
-
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to close XML file: %w", closeErr))
-		}
-	}()
+	defer file.Close()
 
 	var data ValCurs
 
 	decoder := xml.NewDecoder(file)
+	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		if strings.EqualFold(charset, "windows-1251") {
+			return transform.NewReader(input, charmap.Windows1251.NewDecoder()), nil
+		}
+
+		if strings.EqualFold(charset, "utf-8") || strings.EqualFold(charset, "utf8") {
+			return input, nil
+		}
+
+		return nil, fmt.Errorf("unsupported XML encoding: %s", charset)
+	}
+
 	if err := decoder.Decode(&data); err != nil {
 		return nil, fmt.Errorf("failed to decode XML: %w", err)
 	}
 
-	currencies = make([]Currency, 0, len(data.Valutes))
+	currencies := make([]Currency, 0, len(data.Valutes))
 
 	for _, item := range data.Valutes {
 		value, err := parseValue(item.Value)
@@ -109,7 +132,7 @@ func readXML(filename string) (currencies []Currency, err error) {
 
 func writeJSON(filename string, currencies []Currency) (err error) {
 	dir := filepath.Dir(filename)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -138,13 +161,14 @@ func sortValutesDesc(currencies []Currency) []Currency {
 	sorted := slices.Clone(currencies)
 
 	slices.SortFunc(sorted, func(a, b Currency) int {
-		if a.Value > b.Value {
+		switch {
+		case a.Value > b.Value:
 			return -1
-		}
-		if a.Value < b.Value {
+		case a.Value < b.Value:
 			return 1
+		default:
+			return 0
 		}
-		return 0
 	})
 
 	return sorted
