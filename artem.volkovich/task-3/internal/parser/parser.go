@@ -15,8 +15,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const outputDirPermission os.FileMode = 0o755
-const jsonFilePermission os.FileMode = 0o600
+const (
+	outputDirPermission os.FileMode = 0o755
+	jsonFilePermission  os.FileMode = 0o600
+)
 
 func valueToFloat(value string) float64 {
 	value = strings.ReplaceAll(value, ",", ".")
