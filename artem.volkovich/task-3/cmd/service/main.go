@@ -8,6 +8,6 @@ import (
 
 func main() {
 	config_path := flag.String("config", "", "")
-	var input_path, output_path = parser.GetFilenames(*config_path)
-	parser.Parse(input_path, output_path)
+	flag.Parse()
+	parser.SortValutes(*config_path)
 }

@@ -6,8 +6,8 @@ type Config struct {
 }
 
 type Valute struct {
-	NumCode int `xml:"numCode"`
-	CharCode string `xml:"charCode"`
+	NumCode int `xml:"NumCode"`
+	CharCode string `xml:"CharCode"`
 	Nominal string `xml:"Nominal"`
 	Name string `xml:"Name"`
 	Value string `xml:"Value"`
@@ -17,4 +17,10 @@ type Valute struct {
 type ValCurs struct {
 	Date string `xml:"Date,attr"`
 	Valutes []Valute `xml:"Valute"`
+}
+
+type ValJSON struct {
+    NumCode  int    `json:"NumCode"`
+    CharCode string `json:"CharCode"`
+    Value    string `json:"Value"`
 }
