@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,8 +27,8 @@ func valueToFloat(value string) float64 {
 }
 
 func getFilenames(yamlPath string) (string, string) {
-
 	data, err := os.ReadFile(yamlPath)
+
 	if err != nil {
 		panic(fmt.Errorf("error while reading config %q\n %w", yamlPath, err))
 	}
@@ -43,8 +44,8 @@ func getFilenames(yamlPath string) (string, string) {
 }
 
 func parseXML(inputFilename string) ValCurs {
-
 	data, err := os.ReadFile(inputFilename)
+
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +54,7 @@ func parseXML(inputFilename string) ValCurs {
 
 	decoder := xml.NewDecoder(bytes.NewReader(data))
 
-    decoder.CharsetReader = charset.NewReaderLabel
+	decoder.CharsetReader = charset.NewReaderLabel
 
 	err = decoder.Decode(&fileData)
 	if err != nil {
@@ -89,6 +90,11 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 	if err != nil {
 		panic(err)
 	}
+
+	err = os.MkdirAll(filepath.Dir(outputFilename), 0600)
+    if err != nil {
+        panic(err)
+    }
 
 	err = os.WriteFile(outputFilename, data, 0600)
 	if err != nil {
