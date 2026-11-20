@@ -6,10 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
-	InputFile string `yaml:input-file`
-	OutputFile string `yaml:output-file`
-}
+
 
 func GetFilenames(yaml_path string) (string, string) {
 	data, err := os.ReadFile(yaml_path)
@@ -27,5 +24,5 @@ func GetFilenames(yaml_path string) (string, string) {
 }
 
 func Parse (input_filename string, output_filename string) {
-
+	
 }
