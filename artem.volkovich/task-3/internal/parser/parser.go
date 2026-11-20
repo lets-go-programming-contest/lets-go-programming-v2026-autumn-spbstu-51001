@@ -28,7 +28,6 @@ func valueToFloat(value string) float64 {
 
 func getFilenames(yamlPath string) (string, string) {
 	data, err := os.ReadFile(yamlPath)
-
 	if err != nil {
 		panic(fmt.Errorf("error while reading config %q\n %w", yamlPath, err))
 	}
@@ -45,7 +44,6 @@ func getFilenames(yamlPath string) (string, string) {
 
 func parseXML(inputFilename string) ValCurs {
 	data, err := os.ReadFile(inputFilename)
-
 	if err != nil {
 		panic(err)
 	}
@@ -65,8 +63,8 @@ func parseXML(inputFilename string) ValCurs {
 }
 
 func SortValutes(yamlString string) {
-	var input_path, outputPath = getFilenames(yamlString)
-	currencies := parseXML(input_path)
+	inputPath, outputPath := getFilenames(yamlString)
+	currencies := parseXML(inputPath)
 	sort.Slice(currencies.Valutes, func(i, j int) bool {
 		valueL := valueToFloat(currencies.Valutes[i].Value)
 		valueR := valueToFloat(currencies.Valutes[j].Value)
@@ -92,13 +90,12 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 	}
 
 	dir := filepath.Dir(outputFilename)
-	err = os.MkdirAll(dir, 0600)
-
+	err = os.MkdirAll(dir, 0o755)
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(outputFilename, data, 0600)
+	err = os.WriteFile(outputFilename, data, 0o600)
 	if err != nil {
 		panic(err)
 	}
