@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/net/html/charset"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,9 +49,18 @@ func parseXML(inputFilename string) ValCurs {
 		panic(err)
 	}
 
+	reader, err := charset.NewReader(
+        bytes.NewReader(data),
+        "",
+    )
+
+    if err != nil {
+        panic(err)
+    }
+
 	var fileData ValCurs
 
-	err = xml.Unmarshal(data, &fileData)
+	err = xml.NewDecoder(reader).Decode(&fileData)
 
 	if err != nil {
 		panic(err)
@@ -86,7 +97,7 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 		panic(err)
 	}
 
-	err = os.WriteFile(outputFilename, data, 0644)
+	err = os.WriteFile(outputFilename, data, 0600)
 
 	if err != nil {
 		panic(err)
