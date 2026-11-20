@@ -16,8 +16,8 @@ import (
 
 func valueToFloat(value string) float64 {
 	value = strings.ReplaceAll(value, ",", ".")
-	res, err := strconv.ParseFloat(value, 64)
 
+	res, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -26,15 +26,15 @@ func valueToFloat(value string) float64 {
 }
 
 func getFilenames(yamlPath string) (string, string) {
-	data, err := os.ReadFile(yamlPath)
 
+	data, err := os.ReadFile(yamlPath)
 	if err != nil {
 		panic(fmt.Errorf("error while reading config %q\n %w", yamlPath, err))
 	}
 
 	var config Config
-	err = yaml.Unmarshal(data, &config)
 
+	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		panic(err)
 	}
@@ -43,25 +43,19 @@ func getFilenames(yamlPath string) (string, string) {
 }
 
 func parseXML(inputFilename string) ValCurs {
-	data, err := os.ReadFile(inputFilename)
 
+	data, err := os.ReadFile(inputFilename)
 	if err != nil {
 		panic(err)
 	}
 
-	reader, err := charset.NewReader(
-        bytes.NewReader(data),
-        "",
-    )
-
-    if err != nil {
-        panic(err)
-    }
-
 	var fileData ValCurs
 
-	err = xml.NewDecoder(reader).Decode(&fileData)
+	decoder := xml.NewDecoder(bytes.NewReader(data))
 
+    decoder.CharsetReader = charset.NewReaderLabel
+
+	err = decoder.Decode(&fileData)
 	if err != nil {
 		panic(err)
 	}
@@ -92,13 +86,11 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 	}
 
 	data, err := json.MarshalIndent(result, "", "    ")
-
 	if err != nil {
 		panic(err)
 	}
 
 	err = os.WriteFile(outputFilename, data, 0600)
-
 	if err != nil {
 		panic(err)
 	}
