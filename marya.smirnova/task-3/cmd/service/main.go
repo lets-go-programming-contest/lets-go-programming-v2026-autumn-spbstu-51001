@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -69,12 +70,17 @@ func parseValue(s string) (float64, error) {
 	return value, nil
 }
 
-func readXML(filename string) ([]Currency, error) {
+func readXML(filename string) (currencies []Currency, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open XML file: %w", err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close XML file: %w", closeErr))
+		}
+	}()
 
 	var data ValCurs
 
@@ -83,7 +89,7 @@ func readXML(filename string) ([]Currency, error) {
 		return nil, fmt.Errorf("failed to decode XML: %w", err)
 	}
 
-	currencies := make([]Currency, 0, len(data.Valutes))
+	currencies = make([]Currency, 0, len(data.Valutes))
 
 	for _, item := range data.Valutes {
 		value, err := parseValue(item.Value)
@@ -128,6 +134,22 @@ func writeJSON(filename string, currencies []Currency) (err error) {
 	return nil
 }
 
+func sortValutesDesc(currencies []Currency) []Currency {
+	sorted := slices.Clone(currencies)
+
+	slices.SortFunc(sorted, func(a, b Currency) int {
+		if a.Value > b.Value {
+			return -1
+		}
+		if a.Value < b.Value {
+			return 1
+		}
+		return 0
+	})
+
+	return sorted
+}
+
 func main() {
 	configPath := flag.String("config", "", "path to config file")
 	flag.Parse()
@@ -150,7 +172,9 @@ func main() {
 
 	fmt.Printf("Successfully parsed %d currencies\n", len(currencies))
 
-	if err := writeJSON(config.OutputFile, currencies); err != nil {
+	sortedCurrencies := sortValutesDesc(currencies)
+
+	if err := writeJSON(config.OutputFile, sortedCurrencies); err != nil {
 		panic(err)
 	}
 
