@@ -19,9 +19,12 @@ import (
 )
 
 var (
-	errInputFileRequired  = errors.New("input-file is required")
-	errOutputFileRequired = errors.New("output-file is required")
+	errInputFileRequired   = errors.New("input-file is required")
+	errOutputFileRequired  = errors.New("output-file is required")
+	errUnsupportedEncoding = errors.New("unsupported XML encoding")
 )
+
+const outputDirPermission = 0o755
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
@@ -57,14 +60,6 @@ func loadConfig(filename string) (Config, error) {
 	}
 
 	if config.InputFile == "" {
-		return Config{}, errors.New("input-file is required")
-	}
-
-	if config.OutputFile == "" {
-		return Config{}, errors.New("output-file is required")
-	}
-
-	if config.InputFile == "" {
 		return Config{}, errInputFileRequired
 	}
 
@@ -91,7 +86,11 @@ func readXML(filename string) ([]Currency, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open XML file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "failed to close XML file: %v\n", closeErr)
+		}
+	}()
 
 	var data ValCurs
 
@@ -105,7 +104,7 @@ func readXML(filename string) ([]Currency, error) {
 			return input, nil
 		}
 
-		return nil, fmt.Errorf("unsupported XML encoding: %s", charset)
+		return nil, fmt.Errorf("%w: %s", errUnsupportedEncoding, charset)
 	}
 
 	if err := decoder.Decode(&data); err != nil {
@@ -132,7 +131,7 @@ func readXML(filename string) ([]Currency, error) {
 
 func writeJSON(filename string, currencies []Currency) (err error) {
 	dir := filepath.Dir(filename)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, outputDirPermission); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
