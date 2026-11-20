@@ -71,7 +71,7 @@ func SortValutes(yamlString string) {
 		valueL := valueToFloat(currencies.Valutes[i].Value)
 		valueR := valueToFloat(currencies.Valutes[j].Value)
 
-		return valueL < valueR
+		return valueL > valueR
 	})
 	writeJSON(outputPath, currencies)
 }
