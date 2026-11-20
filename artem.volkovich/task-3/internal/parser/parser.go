@@ -91,10 +91,11 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 		panic(err)
 	}
 
-	err = os.MkdirAll(filepath.Dir(outputFilename), 0755)
-    if err != nil {
-        panic(err)
-    }
+	err = os.MkdirAll(filepath.Dir(outputFilename), 0600)
+	
+	if err != nil {
+		panic(err)
+	}
 
 	err = os.WriteFile(outputFilename, data, 0600)
 	if err != nil {
