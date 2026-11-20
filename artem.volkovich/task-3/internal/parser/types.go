@@ -20,7 +20,7 @@ type ValCurs struct {
 }
 
 type ValJSON struct {
-	NumCode  int    `json:"NumCode"`
-	CharCode string `json:"CharCode"`
-	Value    string `json:"Value"`
+	NumCode  int    `json:"num_code"`
+	CharCode string `json:"char_code"`
+	Value    string `json:"value"`
 }
