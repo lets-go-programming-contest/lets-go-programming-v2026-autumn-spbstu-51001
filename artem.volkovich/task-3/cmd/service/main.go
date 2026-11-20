@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	config_path := flag.String("config", "", "")
+	configPath := flag.String("config", "", "")
 	flag.Parse()
-	parser.SortValutes(*config_path)
+	parser.SortValutes(*configPath)
 }
