@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/xml"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -12,6 +15,22 @@ import (
 type Config struct {
 	InputFile  string `yaml:"input-file"`
 	OutputFile string `yaml:"output-file"`
+}
+
+type Currency struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
+}
+
+type ValCurs struct {
+	Valutes []Valute `xml:"Valute"`
+}
+
+type Valute struct {
+	NumCode  int    `xml:"NumCode"`
+	CharCode string `xml:"CharCode"`
+	Value    string `xml:"Value"`
 }
 
 func loadConfig(filename string) (Config, error) {
@@ -37,6 +56,55 @@ func loadConfig(filename string) (Config, error) {
 	return config, nil
 }
 
+func parseValue(s string) (float64, error) {
+	normalized := strings.ReplaceAll(strings.TrimSpace(s), ",", ".")
+
+	value, err := strconv.ParseFloat(normalized, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse float %q: %w", normalized, err)
+	}
+
+	return value, nil
+}
+
+func readXML(filename string) ([]Currency, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open XML file: %w", err)
+	}
+	defer file.Close()
+
+	var raw struct {
+		Currencies []struct {
+			NumCode  int    `xml:"NumCode"`
+			CharCode string `xml:"CharCode"`
+			Value    string `xml:"Value"`
+		} `xml:"Valute"`
+	}
+
+	decoder := xml.NewDecoder(file)
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, fmt.Errorf("failed to decode XML: %w", err)
+	}
+
+	currencies := make([]Currency, 0, len(raw.Currencies))
+
+	for _, item := range raw.Currencies {
+		value, err := parseValue(item.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %s: %w", item.CharCode, err)
+		}
+
+		currencies = append(currencies, Currency{
+			NumCode:  item.NumCode,
+			CharCode: item.CharCode,
+			Value:    value,
+		})
+	}
+
+	return currencies, nil
+}
+
 func main() {
 	configPath := flag.String("config", "", "path to config file")
 	flag.Parse()
@@ -51,4 +119,11 @@ func main() {
 	}
 
 	fmt.Printf("Config loaded: input=%q, output=%q\n", config.InputFile, config.OutputFile)
+
+	currencies, err := readXML(config.InputFile)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Successfully parsed %d currencies\n", len(currencies))
 }
