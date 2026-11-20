@@ -22,5 +22,5 @@ type ValCurs struct {
 type ValJSON struct {
 	NumCode  int    `json:"num_code"`
 	CharCode string `json:"char_code"`
-	Value    string `json:"value"`
+	Value    float64 `json:"value"`
 }

@@ -82,7 +82,7 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 		result = append(result, ValJSON{
 			NumCode:  valute.NumCode,
 			CharCode: valute.CharCode,
-			Value:    valute.Value,
+			Value:    valueToFloat(valute.Value),
 		})
 	}
 
