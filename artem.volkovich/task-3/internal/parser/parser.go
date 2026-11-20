@@ -54,6 +54,7 @@ func parseXML(inputFilename string) ValCurs {
 	if err != nil {
 		panic(err)
 	}
+
 	return fileData
 }
 
@@ -63,6 +64,7 @@ func SortValutes(yamlString string) {
 	sort.Slice(currencies.Valutes, func(i, j int) bool {
 		valueL := valueToFloat(currencies.Valutes[i].Value)
 		valueR := valueToFloat(currencies.Valutes[j].Value)
+
 		return valueL < valueR
 	})
 	writeJSON(outputPath, currencies)
@@ -79,10 +81,14 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 	}
 
 	data, err := json.MarshalIndent(result, "", "    ")
-	
+
 	if err != nil {
 		panic(err)
 	}
 
-	os.WriteFile(outputFilename, data, 0644)
+	err = os.WriteFile(outputFilename, data, 0644)
+
+	if err != nil {
+		panic(err)
+	}
 }
