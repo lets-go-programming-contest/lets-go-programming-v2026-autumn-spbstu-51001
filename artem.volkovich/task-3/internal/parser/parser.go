@@ -15,6 +15,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const outputDirPermission os.FileMode = 0o755
+const jsonFilePermission os.FileMode = 0o600
+
 func valueToFloat(value string) float64 {
 	value = strings.ReplaceAll(value, ",", ".")
 
@@ -90,13 +93,13 @@ func writeJSON(outputFilename string, currencies ValCurs) {
 	}
 
 	dir := filepath.Dir(outputFilename)
-	err = os.MkdirAll(dir, 0755)
-	
+
+	err = os.MkdirAll(dir, outputDirPermission)
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(outputFilename, data, 0600)
+	err = os.WriteFile(outputFilename, data, jsonFilePermission)
 	if err != nil {
 		panic(err)
 	}
