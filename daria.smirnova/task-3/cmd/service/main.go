@@ -1,0 +1,189 @@
+package main
+
+import (
+	"bytes"
+	"cmp"
+	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+
+	"golang.org/x/text/encoding/charmap"
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	configFlagName  = "config"
+	configFlagUsage = "path to the yaml config file"
+)
+
+const floatBitSize = 64
+
+const (
+	dirPermissions  = 0o750
+	filePermissions = 0o600
+	jsonIndent      = "  "
+)
+
+var errEmptyConfigPath = errors.New("config path is not specified")
+
+var errUnsupportedCharset = errors.New("unsupported xml charset")
+
+type config struct {
+	InputFile  string `yaml:"input-file"`
+	OutputFile string `yaml:"output-file"`
+}
+
+type decimal float64
+
+type valute struct {
+	NumCode  int     `xml:"NumCode"`
+	CharCode string  `xml:"CharCode"`
+	Value    decimal `xml:"Value"`
+}
+
+type valCurs struct {
+	XMLName xml.Name `xml:"ValCurs"`
+	Valutes []valute `xml:"Valute"`
+}
+
+type currency struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
+}
+
+func main() {
+	cfg, err := loadConfig(parseConfigPath())
+	if err != nil {
+		panic(err)
+	}
+
+	valutes, err := loadValutes(cfg.InputFile)
+	if err != nil {
+		panic(err)
+	}
+
+	err = saveResults(cfg.OutputFile, sortByValueDescending(convert(valutes)))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func parseConfigPath() string {
+	path := flag.String(configFlagName, "", configFlagUsage)
+
+	flag.Parse()
+
+	return *path
+}
+
+func loadConfig(path string) (config, error) {
+	if path == "" {
+		return config{}, errEmptyConfigPath
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return config{}, fmt.Errorf("reading config file: %w", err)
+	}
+
+	var cfg config
+
+	err = yaml.Unmarshal(data, &cfg)
+	if err != nil {
+		return config{}, fmt.Errorf("decoding config file: %w", err)
+	}
+
+	return cfg, nil
+}
+
+func (value *decimal) UnmarshalText(text []byte) error {
+	normalized := strings.Replace(strings.TrimSpace(string(text)), ",", ".", 1)
+
+	parsed, err := strconv.ParseFloat(normalized, floatBitSize)
+	if err != nil {
+		return fmt.Errorf("parsing value %q: %w", text, err)
+	}
+
+	*value = decimal(parsed)
+
+	return nil
+}
+
+func loadValutes(path string) ([]valute, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading input file: %w", err)
+	}
+
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	decoder.CharsetReader = charsetReader
+
+	var rates valCurs
+
+	err = decoder.Decode(&rates)
+	if err != nil {
+		return nil, fmt.Errorf("decoding input file: %w", err)
+	}
+
+	return rates.Valutes, nil
+}
+
+func charsetReader(charset string, input io.Reader) (io.Reader, error) {
+	if strings.EqualFold(charset, "windows-1251") {
+		return charmap.Windows1251.NewDecoder().Reader(input), nil
+	}
+
+	return nil, fmt.Errorf("%w: %s", errUnsupportedCharset, charset)
+}
+
+func convert(valutes []valute) []currency {
+	result := make([]currency, 0, len(valutes))
+
+	for _, item := range valutes {
+		result = append(result, currency{
+			NumCode:  item.NumCode,
+			CharCode: item.CharCode,
+			Value:    float64(item.Value),
+		})
+	}
+
+	return result
+}
+
+func sortByValueDescending(items []currency) []currency {
+	sorted := slices.Clone(items)
+
+	slices.SortStableFunc(sorted, func(first, second currency) int {
+		return cmp.Compare(second.Value, first.Value)
+	})
+
+	return sorted
+}
+
+func saveResults(path string, items []currency) error {
+	err := os.MkdirAll(filepath.Dir(path), dirPermissions)
+	if err != nil {
+		return fmt.Errorf("creating output directory: %w", err)
+	}
+
+	data, err := json.MarshalIndent(items, "", jsonIndent)
+	if err != nil {
+		return fmt.Errorf("encoding result: %w", err)
+	}
+
+	err = os.WriteFile(path, data, filePermissions)
+	if err != nil {
+		return fmt.Errorf("writing output file: %w", err)
+	}
+
+	return nil
+}
