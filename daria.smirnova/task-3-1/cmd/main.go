@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/xml"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -44,6 +46,12 @@ type valCurs struct {
 	Valutes []valute `xml:"Valute"`
 }
 
+type currency struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
+}
+
 func main() {
 	cfg, err := loadConfig(parseConfigPath())
 	if err != nil {
@@ -55,7 +63,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(len(valutes))
+	fmt.Println(sortByValueDescending(convert(valutes)))
 }
 
 func parseConfigPath() string {
@@ -124,4 +132,28 @@ func charsetReader(charset string, input io.Reader) (io.Reader, error) {
 	}
 
 	return nil, fmt.Errorf("%w: %s", errUnsupportedCharset, charset)
+}
+
+func convert(valutes []valute) []currency {
+	result := make([]currency, 0, len(valutes))
+
+	for _, item := range valutes {
+		result = append(result, currency{
+			NumCode:  item.NumCode,
+			CharCode: item.CharCode,
+			Value:    float64(item.Value),
+		})
+	}
+
+	return result
+}
+
+func sortByValueDescending(items []currency) []currency {
+	sorted := slices.Clone(items)
+
+	slices.SortStableFunc(sorted, func(first, second currency) int {
+		return cmp.Compare(second.Value, first.Value)
+	})
+
+	return sorted
 }
