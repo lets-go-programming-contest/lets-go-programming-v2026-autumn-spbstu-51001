@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"cmp"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -23,6 +25,12 @@ const (
 )
 
 const floatBitSize = 64
+
+const (
+	dirPermissions  = 0o750
+	filePermissions = 0o600
+	jsonIndent      = "  "
+)
 
 var errEmptyConfigPath = errors.New("config path is not specified")
 
@@ -63,7 +71,10 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(sortByValueDescending(convert(valutes)))
+	err = saveResults(cfg.OutputFile, sortByValueDescending(convert(valutes)))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func parseConfigPath() string {
@@ -156,4 +167,23 @@ func sortByValueDescending(items []currency) []currency {
 	})
 
 	return sorted
+}
+
+func saveResults(path string, items []currency) error {
+	err := os.MkdirAll(filepath.Dir(path), dirPermissions)
+	if err != nil {
+		return fmt.Errorf("creating output directory: %w", err)
+	}
+
+	data, err := json.MarshalIndent(items, "", jsonIndent)
+	if err != nil {
+		return fmt.Errorf("encoding result: %w", err)
+	}
+
+	err = os.WriteFile(path, data, filePermissions)
+	if err != nil {
+		return fmt.Errorf("writing output file: %w", err)
+	}
+
+	return nil
 }
