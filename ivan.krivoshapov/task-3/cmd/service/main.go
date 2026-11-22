@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
@@ -52,4 +53,19 @@ func LoadConfig(path string) Config {
 	}
 
 	return config
+}
+
+type Valute struct {
+	ID       string `xml:"ID,attr"`
+	NumCode  string `xml:"NumCode"`
+	CharCode string `xml:"CharCode"`
+	Nominal  int    `xml:"Nominal"`
+	Name     string `xml:"Name"`
+	Value    string `xml:"Value"`
+}
+
+type ValCurs struct {
+	XMLName xml.Name `xml:"ValCurs"`
+	Date    string   `xml:"Date,attr"`
+	Valutes []Valute `xml:"Valute"`
 }
