@@ -100,16 +100,28 @@ func convertCurrencies(raw []CurrencyXML) ([]Currency, error) {
 	currencies := make([]Currency, 0, len(raw))
 
 	for _, currency := range raw {
-		numCode, err := strconv.Atoi(currency.NumCode)
-		if err != nil {
-			return nil, fmt.Errorf("parse NumCode %q: %w", currency.NumCode, err)
+		numCode := 0
+
+		if strings.TrimSpace(currency.NumCode) != "" {
+			parsedCode, err := strconv.Atoi(currency.NumCode)
+			if err != nil {
+				return nil, fmt.Errorf("parse NumCode %q: %w", currency.NumCode, err)
+			}
+
+			numCode = parsedCode
 		}
 
-		valueText := strings.ReplaceAll(currency.Value, ",", ".")
+		value := 0.0
 
-		value, err := strconv.ParseFloat(valueText, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parse Value %q: %w", currency.Value, err)
+		if strings.TrimSpace(currency.Value) != "" {
+			valueText := strings.ReplaceAll(currency.Value, ",", ".")
+
+			parsedValue, err := strconv.ParseFloat(valueText, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parse Value %q: %w", currency.Value, err)
+			}
+
+			value = parsedValue
 		}
 
 		currencies = append(currencies, Currency{
