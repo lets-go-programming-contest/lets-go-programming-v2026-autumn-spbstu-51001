@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -122,7 +123,7 @@ type ValuteJSON struct {
 	Value    float64 `json:"value"`
 }
 
-func ConvertValutes(valutes []Valute) []ValuteJSON {
+func SortValutesByValueDesc(valutes []Valute) []ValuteJSON {
 	result := make([]ValuteJSON, 0, len(valutes))
 
 	for _, valute := range valutes {
@@ -154,5 +155,8 @@ func ConvertValutes(valutes []Valute) []ValuteJSON {
 		})
 	}
 
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Value > result[j].Value
+	})
 	return result
 }
