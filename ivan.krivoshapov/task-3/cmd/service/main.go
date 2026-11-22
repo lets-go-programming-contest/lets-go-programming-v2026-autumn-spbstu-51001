@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -112,4 +113,38 @@ func LoadValCurs(path string) ValCurs {
 		}
 		panic(fmt.Errorf("unexpected content after ValCurs in %q", path))
 	}
+}
+
+type ValuteJSON struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
+}
+
+func ConvertValutes(valutes []Valute) []ValuteJSON {
+	result := make([]ValuteJSON, 0, len(valutes))
+
+	for _, valute := range valutes {
+		charCode := strings.TrimSpace(valute.CharCode)
+		if charCode == "" {
+			panic(fmt.Errorf("missing CharCode for currency %q", valute.ID))
+		}
+
+		// As in the example, an empty numerical code is represented as 0.
+		numCode := 0
+		if code := strings.TrimSpace(valute.NumCode); code != "" {
+			parsedCode, err := strconv.Atoi(code)
+			if err != nil {
+				panic(fmt.Errorf("invalid NumCode for %s: %w", charCode, err))
+			}
+			numCode = parsedCode
+		}
+
+		result = append(result, ValuteJSON{
+			NumCode:  numCode,
+			CharCode: charCode,
+		})
+	}
+
+	return result
 }
