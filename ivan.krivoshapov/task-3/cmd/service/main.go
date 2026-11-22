@@ -18,19 +18,32 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
+const dirPermissions = 0o755
+
 type Config struct {
 	InputFile  string `yaml:"input-file"`
 	OutputFile string `yaml:"output-file"`
 }
 
-func main() {
-	configPath := flag.String("config", "config.yaml", "path to the config file")
-	flag.Parse()
+type Valute struct {
+	ID       string `xml:"ID,attr"`
+	NumCode  string `xml:"NumCode"`
+	CharCode string `xml:"CharCode"`
+	Nominal  int    `xml:"Nominal"`
+	Name     string `xml:"Name"`
+	Value    string `xml:"Value"`
+}
 
-	if *configPath == "" {
-		panic("config path is empty")
-	}
+type ValCurs struct {
+	XMLName xml.Name `xml:"ValCurs"`
+	Date    string   `xml:"Date,attr"`
+	Valutes []Valute `xml:"Valute"`
+}
 
+type ValuteJSON struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
 }
 
 func LoadConfig(path string) Config {
@@ -59,21 +72,6 @@ func LoadConfig(path string) Config {
 	}
 
 	return config
-}
-
-type Valute struct {
-	ID       string `xml:"ID,attr"`
-	NumCode  string `xml:"NumCode"`
-	CharCode string `xml:"CharCode"`
-	Nominal  int    `xml:"Nominal"`
-	Name     string `xml:"Name"`
-	Value    string `xml:"Value"`
-}
-
-type ValCurs struct {
-	XMLName xml.Name `xml:"ValCurs"`
-	Date    string   `xml:"Date,attr"`
-	Valutes []Valute `xml:"Valute"`
 }
 
 func LoadValCurs(path string) ValCurs {
@@ -119,12 +117,6 @@ func LoadValCurs(path string) ValCurs {
 	}
 }
 
-type ValuteJSON struct {
-	NumCode  int     `json:"num_code"`
-	CharCode string  `json:"char_code"`
-	Value    float64 `json:"value"`
-}
-
 func SortValutesByValueDesc(valutes []Valute) []ValuteJSON {
 	result := make([]ValuteJSON, 0, len(valutes))
 
@@ -163,8 +155,6 @@ func SortValutesByValueDesc(valutes []Valute) []ValuteJSON {
 	return result
 }
 
-const dirPermissions = 0o755
-
 func SaveValutesJSON(valutes []ValuteJSON, path string) {
 	data, err := json.MarshalIndent(valutes, "", "  ")
 	if err != nil {
@@ -176,7 +166,32 @@ func SaveValutesJSON(valutes []ValuteJSON, path string) {
 		panic(fmt.Errorf("create output directory %q: %w", dir, err))
 	}
 
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	// Write in the destination directory so renaming replaces the file atomically.
+	file, err := os.CreateTemp(dir, ".valutes-*.json")
+	if err != nil {
+		panic(fmt.Errorf("create output file for %q: %w", path, err))
+	}
+	defer os.Remove(file.Name())
+
+	_, writeErr := file.Write(data)
+	closeErr := file.Close()
+	if writeErr != nil {
+		panic(fmt.Errorf("write JSON %q: %w", path, writeErr))
+	}
+	if closeErr != nil {
+		panic(fmt.Errorf("close JSON %q: %w", path, closeErr))
+	}
+	if err := os.Rename(file.Name(), path); err != nil {
 		panic(fmt.Errorf("save JSON %q: %w", path, err))
 	}
+}
+
+func main() {
+	configPath := flag.String("config", "config.yaml", "path to the config file")
+	flag.Parse()
+
+	if *configPath == "" {
+		panic("config path is empty")
+	}
+
 }
