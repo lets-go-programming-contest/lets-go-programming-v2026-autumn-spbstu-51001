@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -140,9 +141,16 @@ func ConvertValutes(valutes []Valute) []ValuteJSON {
 			numCode = parsedCode
 		}
 
+		valueText := strings.ReplaceAll(strings.TrimSpace(valute.Value), ",", ".")
+		value, err := strconv.ParseFloat(valueText, 64)
+		if err != nil || math.IsNaN(value) || math.IsInf(value, 0) {
+			panic(fmt.Errorf("invalid Value %q for %s", valute.Value, charCode))
+		}
+
 		result = append(result, ValuteJSON{
 			NumCode:  numCode,
 			CharCode: charCode,
+			Value:    value,
 		})
 	}
 
