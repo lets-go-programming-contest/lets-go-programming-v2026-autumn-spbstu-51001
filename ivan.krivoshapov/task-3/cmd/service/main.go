@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -19,6 +21,14 @@ import (
 )
 
 const dirPermissions = 0o755
+
+var (
+	errMultipleConfigDocuments = errors.New("must contain one YAML document")
+	errMissingConfigPaths      = errors.New("must specify input-file and output-file")
+	errUnsupportedXMLEncoding  = errors.New("unsupported XML encoding")
+	errTrailingXML             = errors.New("unexpected content after ValCurs")
+	errNonFiniteRate           = errors.New("exchange rate must be finite")
+)
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
@@ -52,23 +62,29 @@ func LoadConfig(path string) Config {
 		panic(fmt.Errorf("read config %q: %w", path, err))
 	}
 
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	var config Config
+
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	if err := decoder.Decode(&config); err != nil {
 		panic(fmt.Errorf("decode YAML %q: %w", path, err))
 	}
+
 	var extra yaml.Node
-	if err := decoder.Decode(&extra); err != io.EOF {
-		if err != nil {
-			panic(fmt.Errorf("decode YAML %q: %w", path, err))
-		}
-		panic(fmt.Errorf("config %q must contain one YAML document", path))
+
+	err = decoder.Decode(&extra)
+	if err == nil {
+		panic(fmt.Errorf("config %q: %w", path, errMultipleConfigDocuments))
+	}
+
+	if !errors.Is(err, io.EOF) {
+		panic(fmt.Errorf("decode YAML %q: %w", path, err))
 	}
 
 	config.InputFile = strings.TrimSpace(config.InputFile)
 	config.OutputFile = strings.TrimSpace(config.OutputFile)
+
 	if config.InputFile == "" || config.OutputFile == "" {
-		panic(fmt.Errorf("config %q must specify input-file and output-file", path))
+		panic(fmt.Errorf("config %q: %w", path, errMissingConfigPaths))
 	}
 
 	return config
@@ -79,7 +95,12 @@ func LoadValCurs(path string) ValCurs {
 	if err != nil {
 		panic(fmt.Errorf("open XML %q: %w", path, err))
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("close XML %q: %v", path, err)
+		}
+	}()
 
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
@@ -87,7 +108,7 @@ func LoadValCurs(path string) ValCurs {
 		case "windows-1251", "cp1251":
 			return charmap.Windows1251.NewDecoder().Reader(input), nil
 		default:
-			return nil, fmt.Errorf("unsupported XML encoding %q", charset)
+			return nil, fmt.Errorf("%w %q", errUnsupportedXMLEncoding, charset)
 		}
 	}
 
@@ -98,10 +119,11 @@ func LoadValCurs(path string) ValCurs {
 
 	for {
 		token, err := decoder.Token()
-		if err == io.EOF {
-			return valCurs
-		}
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return valCurs
+			}
+
 			panic(fmt.Errorf("decode XML %q: %w", path, err))
 		}
 
@@ -113,7 +135,8 @@ func LoadValCurs(path string) ValCurs {
 				continue
 			}
 		}
-		panic(fmt.Errorf("unexpected content after ValCurs in %q", path))
+
+		panic(fmt.Errorf("%w in %q", errTrailingXML, path))
 	}
 }
 
@@ -122,24 +145,28 @@ func SortValutesByValueDesc(valutes []Valute) []ValuteJSON {
 
 	for _, valute := range valutes {
 		charCode := strings.TrimSpace(valute.CharCode)
-		if charCode == "" {
-			panic(fmt.Errorf("missing CharCode for currency %q", valute.ID))
-		}
 
 		// As in the example, an empty numerical code is represented as 0.
 		numCode := 0
+
 		if code := strings.TrimSpace(valute.NumCode); code != "" {
 			parsedCode, err := strconv.Atoi(code)
 			if err != nil {
-				panic(fmt.Errorf("invalid NumCode for %s: %w", charCode, err))
+				panic(fmt.Errorf("invalid NumCode for currency %q: %w", valute.ID, err))
 			}
+
 			numCode = parsedCode
 		}
 
 		valueText := strings.ReplaceAll(strings.TrimSpace(valute.Value), ",", ".")
 		value, err := strconv.ParseFloat(valueText, 64)
-		if err != nil || math.IsNaN(value) || math.IsInf(value, 0) {
-			panic(fmt.Errorf("invalid Value %q for %s", valute.Value, charCode))
+
+		if err == nil && (math.IsNaN(value) || math.IsInf(value, 0)) {
+			err = errNonFiniteRate
+		}
+
+		if err != nil {
+			panic(fmt.Errorf("invalid Value %q for currency %q: %w", valute.Value, valute.ID, err))
 		}
 
 		result = append(result, ValuteJSON{
@@ -152,6 +179,7 @@ func SortValutesByValueDesc(valutes []Valute) []ValuteJSON {
 	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].Value > result[j].Value
 	})
+
 	return result
 }
 
@@ -171,17 +199,27 @@ func SaveValutesJSON(valutes []ValuteJSON, path string) {
 	if err != nil {
 		panic(fmt.Errorf("create output file for %q: %w", path, err))
 	}
-	defer os.Remove(file.Name())
+
+	tempPath := file.Name()
+
+	defer func() {
+		if err := os.Remove(tempPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Printf("remove temporary JSON %q: %v", tempPath, err)
+		}
+	}()
 
 	_, writeErr := file.Write(data)
 	closeErr := file.Close()
+
 	if writeErr != nil {
 		panic(fmt.Errorf("write JSON %q: %w", path, writeErr))
 	}
+
 	if closeErr != nil {
 		panic(fmt.Errorf("close JSON %q: %w", path, closeErr))
 	}
-	if err := os.Rename(file.Name(), path); err != nil {
+
+	if err := os.Rename(tempPath, path); err != nil {
 		panic(fmt.Errorf("save JSON %q: %w", path, err))
 	}
 }
