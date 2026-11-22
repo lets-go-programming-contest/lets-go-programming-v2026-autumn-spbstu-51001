@@ -18,6 +18,11 @@ import (
 
 var errMissingConfigFields = errors.New("required configuration fields are missing")
 
+const (
+	dirPerm  = 0o750
+	filePerm = 0o600
+)
+
 type Config struct {
 	InputFile  string `yaml:"input-file"`
 	OutputFile string `yaml:"output-file"`
@@ -125,12 +130,12 @@ func saveJSON(path string, currencies []Currency) error {
 
 	dir := filepath.Dir(path)
 
-	err = os.MkdirAll(dir, 0o750)
+	err = os.MkdirAll(dir, dirPerm)
 	if err != nil {
 		return fmt.Errorf("create directory %q: %w", dir, err)
 	}
 
-	err = os.WriteFile(path, data, 0o600)
+	err = os.WriteFile(path, data, filePerm)
 	if err != nil {
 		return fmt.Errorf("write JSON %q: %w", path, err)
 	}
