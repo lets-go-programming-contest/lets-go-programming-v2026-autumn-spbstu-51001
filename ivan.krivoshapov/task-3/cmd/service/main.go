@@ -194,4 +194,8 @@ func main() {
 		panic("config path is empty")
 	}
 
+	config := LoadConfig(*configPath)
+	valCurs := LoadValCurs(config.InputFile)
+	sortedValutes := SortValutesByValueDesc(valCurs.Valutes)
+	SaveValutesJSON(sortedValutes, config.OutputFile)
 }
