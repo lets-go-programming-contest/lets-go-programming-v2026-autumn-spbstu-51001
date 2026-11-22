@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+	"golang.org/x/text/encoding/charmap"
 )
 
 type Config struct {
@@ -78,6 +79,14 @@ func LoadValCurs(path string) ValCurs {
 	defer file.Close()
 
 	decoder := xml.NewDecoder(file)
+	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		switch strings.ToLower(charset) {
+		case "windows-1251", "cp1251":
+			return charmap.Windows1251.NewDecoder().Reader(input), nil
+		default:
+			return nil, fmt.Errorf("unsupported XML encoding %q", charset)
+		}
+	}
 
 	var valCurs ValCurs
 	if err := decoder.Decode(&valCurs); err != nil {
