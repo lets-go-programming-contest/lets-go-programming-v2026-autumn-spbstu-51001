@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -159,4 +161,22 @@ func SortValutesByValueDesc(valutes []Valute) []ValuteJSON {
 		return result[i].Value > result[j].Value
 	})
 	return result
+}
+
+const dirPermissions = 0o755
+
+func SaveValutesJSON(valutes []ValuteJSON, path string) {
+	data, err := json.MarshalIndent(valutes, "", "  ")
+	if err != nil {
+		panic(fmt.Errorf("encode JSON: %w", err))
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, dirPermissions); err != nil {
+		panic(fmt.Errorf("create output directory %q: %w", dir, err))
+	}
+
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		panic(fmt.Errorf("save JSON %q: %w", path, err))
+	}
 }
