@@ -69,3 +69,38 @@ type ValCurs struct {
 	Date    string   `xml:"Date,attr"`
 	Valutes []Valute `xml:"Valute"`
 }
+
+func LoadValCurs(path string) ValCurs {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(fmt.Errorf("open XML %q: %w", path, err))
+	}
+	defer file.Close()
+
+	decoder := xml.NewDecoder(file)
+
+	var valCurs ValCurs
+	if err := decoder.Decode(&valCurs); err != nil {
+		panic(fmt.Errorf("decode XML %q: %w", path, err))
+	}
+
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			return valCurs
+		}
+		if err != nil {
+			panic(fmt.Errorf("decode XML %q: %w", path, err))
+		}
+
+		switch token := token.(type) {
+		case xml.Comment, xml.ProcInst:
+			continue
+		case xml.CharData:
+			if strings.TrimSpace(string(token)) == "" {
+				continue
+			}
+		}
+		panic(fmt.Errorf("unexpected content after ValCurs in %q", path))
+	}
+}
