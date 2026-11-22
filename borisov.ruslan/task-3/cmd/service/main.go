@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"go.yaml.in/yaml/v3"
 	"golang.org/x/net/html/charset"
 )
+
+var errMissingConfigFields = errors.New("required configuration fields are missing")
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
@@ -48,16 +51,16 @@ func loadConfig(path string) (Config, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return config, err
+		return config, fmt.Errorf("read config %q: %w", path, err)
 	}
 
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		return config, err
+		return config, fmt.Errorf("decode YAML %q: %w", path, err)
 	}
 
 	if config.InputFile == "" || config.OutputFile == "" {
-		return config, fmt.Errorf("Fields had`t filled in %s", path)
+		return config, fmt.Errorf("config %q: %w", path, errMissingConfigFields)
 	}
 
 	return config, nil
@@ -66,18 +69,23 @@ func loadConfig(path string) (Config, error) {
 func loadRates(path string) ([]CurrencyXML, error) {
 	xmlFile, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open XML %q: %w", path, err)
 	}
-	defer xmlFile.Close()
 
 	decoder := xml.NewDecoder(xmlFile)
 	decoder.CharsetReader = charset.NewReaderLabel
 
 	var rates ValCursXML
 
-	err = decoder.Decode(&rates)
-	if err != nil {
-		return nil, err
+	decodeErr := decoder.Decode(&rates)
+	closeErr := xmlFile.Close()
+
+	if decodeErr != nil {
+		return nil, fmt.Errorf("decode XML %q: %w", path, decodeErr)
+	}
+
+	if closeErr != nil {
+		return nil, fmt.Errorf("close XML %q: %w", path, closeErr)
 	}
 
 	return rates.Currencies, nil
@@ -89,14 +97,14 @@ func convertCurrencies(raw []CurrencyXML) ([]Currency, error) {
 	for _, currency := range raw {
 		numCode, err := strconv.Atoi(currency.NumCode)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse NumCode %q: %w", currency.NumCode, err)
 		}
 
 		valueText := strings.ReplaceAll(currency.Value, ",", ".")
 
 		value, err := strconv.ParseFloat(valueText, 64)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse Value %q: %w", currency.Value, err)
 		}
 
 		currencies = append(currencies, Currency{
@@ -112,19 +120,19 @@ func convertCurrencies(raw []CurrencyXML) ([]Currency, error) {
 func saveJSON(path string, currencies []Currency) error {
 	data, err := json.MarshalIndent(currencies, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("encode JSON: %w", err)
 	}
 
 	dir := filepath.Dir(path)
 
-	err = os.MkdirAll(dir, 0755)
+	err = os.MkdirAll(dir, 0o750)
 	if err != nil {
-		return err
+		return fmt.Errorf("create directory %q: %w", dir, err)
 	}
 
-	err = os.WriteFile(path, data, 0644)
+	err = os.WriteFile(path, data, 0o600)
 	if err != nil {
-		return err
+		return fmt.Errorf("write JSON %q: %w", path, err)
 	}
 
 	return nil
